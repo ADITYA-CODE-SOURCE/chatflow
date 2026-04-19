@@ -1,0 +1,14 @@
+backend/target/
+backend/*.log
+backend/hs_err_pid*.log
+backend/replay_pid*.log
+
+frontend/node_modules/
+frontend/dist/
+
+.idea/
+.vscode/
+*.iml
+
+.DS_Store
+Thumbs.db
