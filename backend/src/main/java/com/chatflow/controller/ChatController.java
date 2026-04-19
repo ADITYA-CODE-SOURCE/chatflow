@@ -10,9 +10,6 @@ import com.chatflow.service.ChatService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
-import org.springframework.messaging.handler.annotation.MessageMapping;
-import org.springframework.messaging.handler.annotation.Payload;
-import org.springframework.messaging.handler.annotation.SendTo;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
@@ -59,6 +56,30 @@ public class ChatController {
             @AuthenticationPrincipal UserPrincipal principal) {
         User user = principal.getUser();
         return ResponseEntity.ok(chatService.getMessages(roomId, page, size, user));
+    }
+
+    @PostMapping("/{roomId}/messages")
+    public ResponseEntity<MessageDto> sendMessage(
+            @PathVariable UUID roomId,
+            @RequestBody Map<String, String> request,
+            @AuthenticationPrincipal UserPrincipal principal) {
+        User user = principal.getUser();
+        String content = request.getOrDefault("content", "");
+        String messageTypeValue = request.getOrDefault("messageType", Message.MessageType.TEXT.name());
+        Message.MessageType messageType = Message.MessageType.valueOf(messageTypeValue.toUpperCase());
+
+        return ResponseEntity.ok(chatService.sendMessage(roomId, content, messageType, user));
+    }
+
+    @PostMapping("/{roomId}/typing")
+    public ResponseEntity<Void> sendTypingIndicator(
+            @PathVariable UUID roomId,
+            @RequestBody Map<String, Boolean> request,
+            @AuthenticationPrincipal UserPrincipal principal) {
+        User user = principal.getUser();
+        boolean typing = request.getOrDefault("typing", false);
+        chatService.sendTypingIndicator(roomId, user, typing);
+        return ResponseEntity.ok().build();
     }
     
     @GetMapping("/{roomId}/participants")

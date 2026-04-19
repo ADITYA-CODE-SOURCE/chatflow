@@ -62,6 +62,12 @@ export const chatApi = {
     api.get<{ content: Message[] }>(`/chat-rooms/${roomId}/messages`, {
       params: { page, size },
     }),
+
+  sendMessage: (roomId: string, data: { content: string; messageType?: 'TEXT' | 'IMAGE' | 'FILE' }) =>
+    api.post<Message>(`/chat-rooms/${roomId}/messages`, data),
+
+  sendTyping: (roomId: string, typing: boolean) =>
+    api.post(`/chat-rooms/${roomId}/typing`, { typing }),
   
   getParticipants: (roomId: string) =>
     api.get<User[]>(`/chat-rooms/${roomId}/participants`),

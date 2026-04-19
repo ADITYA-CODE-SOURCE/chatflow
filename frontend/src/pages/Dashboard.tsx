@@ -1,7 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
+import { Client } from '@stomp/stompjs';
+import SockJS from 'sockjs-client';
 import { chatApi } from '../services/api';
 import { useAuthStore, useChatStore } from '../stores';
-import type { ChatRoom, Message } from '../types';
+import type { Message, TypingIndicator } from '../types';
 import './Dashboard.css';
 
 export default function Dashboard() {
@@ -11,7 +13,13 @@ export default function Dashboard() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [newRoomName, setNewRoomName] = useState('');
   const [newRoomDescription, setNewRoomDescription] = useState('');
+  const [typingUsers, setTypingUsers] = useState<string[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const stompClientRef = useRef<Client | null>(null);
+  const roomMessageSubRef = useRef<{ unsubscribe: () => void } | null>(null);
+  const roomTypingSubRef = useRef<{ unsubscribe: () => void } | null>(null);
+  const typingResetTimeoutRef = useRef<number | null>(null);
+  const isTypingRef = useRef(false);
 
   useEffect(() => {
     loadChatRooms();
@@ -26,6 +34,66 @@ export default function Dashboard() {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
+
+  useEffect(() => {
+    const client = new Client({
+      webSocketFactory: () => new SockJS('/ws'),
+      reconnectDelay: 3000,
+      onConnect: () => {
+        subscribeToCurrentRoom();
+      },
+    });
+
+    client.activate();
+    stompClientRef.current = client;
+
+    return () => {
+      roomMessageSubRef.current?.unsubscribe();
+      roomTypingSubRef.current?.unsubscribe();
+      if (typingResetTimeoutRef.current) {
+        window.clearTimeout(typingResetTimeoutRef.current);
+      }
+      client.deactivate();
+    };
+  }, []);
+
+  useEffect(() => {
+    subscribeToCurrentRoom();
+    setTypingUsers([]);
+  }, [currentRoom?.id]);
+
+  const subscribeToCurrentRoom = () => {
+    const client = stompClientRef.current;
+    if (!client?.connected || !currentRoom) {
+      roomMessageSubRef.current?.unsubscribe();
+      roomTypingSubRef.current?.unsubscribe();
+      roomMessageSubRef.current = null;
+      roomTypingSubRef.current = null;
+      return;
+    }
+
+    roomMessageSubRef.current?.unsubscribe();
+    roomTypingSubRef.current?.unsubscribe();
+
+    roomMessageSubRef.current = client.subscribe(`/topic/chat/${currentRoom.id}`, (frame) => {
+      const incomingMessage = JSON.parse(frame.body) as Message;
+      addMessage(incomingMessage);
+    });
+
+    roomTypingSubRef.current = client.subscribe(`/topic/chat/${currentRoom.id}/typing`, (frame) => {
+      const indicator = JSON.parse(frame.body) as TypingIndicator;
+      if (indicator.userId === user?.id) {
+        return;
+      }
+
+      setTypingUsers((prev) => {
+        if (indicator.typing) {
+          return prev.includes(indicator.userName) ? prev : [...prev, indicator.userName];
+        }
+        return prev.filter((name) => name !== indicator.userName);
+      });
+    });
+  };
 
   const loadChatRooms = async () => {
     try {
@@ -50,23 +118,63 @@ export default function Dashboard() {
     if (!messageInput.trim() || !currentRoom) return;
 
     try {
-      const response = await fetch(`/api/chat-rooms/${currentRoom.id}/messages`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${localStorage.getItem('accessToken')}`,
-        },
-        body: JSON.stringify({ content: messageInput, messageType: 'TEXT' }),
+      const response = await chatApi.sendMessage(currentRoom.id, {
+        content: messageInput,
+        messageType: 'TEXT',
       });
 
-      if (response.ok) {
-        const message = await response.json();
-        addMessage(message);
-        setMessageInput('');
+      if (!stompClientRef.current?.connected) {
+        addMessage(response.data);
       }
+
+      setMessageInput('');
+      stopTyping();
     } catch (error) {
       console.error('Failed to send message:', error);
     }
+  };
+
+  const sendTyping = async (typing: boolean) => {
+    if (!currentRoom) return;
+    try {
+      await chatApi.sendTyping(currentRoom.id, typing);
+    } catch (error) {
+      console.error('Failed to send typing indicator:', error);
+    }
+  };
+
+  const stopTyping = () => {
+    if (!isTypingRef.current) return;
+    isTypingRef.current = false;
+    sendTyping(false);
+    if (typingResetTimeoutRef.current) {
+      window.clearTimeout(typingResetTimeoutRef.current);
+      typingResetTimeoutRef.current = null;
+    }
+  };
+
+  const handleMessageInputChange = (value: string) => {
+    setMessageInput(value);
+
+    if (!currentRoom) return;
+
+    if (!value.trim()) {
+      stopTyping();
+      return;
+    }
+
+    if (!isTypingRef.current) {
+      isTypingRef.current = true;
+      sendTyping(true);
+    }
+
+    if (typingResetTimeoutRef.current) {
+      window.clearTimeout(typingResetTimeoutRef.current);
+    }
+
+    typingResetTimeoutRef.current = window.setTimeout(() => {
+      stopTyping();
+    }, 1200);
   };
 
   const handleCreateRoom = async (e: React.FormEvent) => {
@@ -151,9 +259,11 @@ export default function Dashboard() {
               <div className="chat-header-info">
                 <div className="chat-header-name">{currentRoom.name}</div>
                 <div className="chat-header-status">
-                  {currentRoom.roomType === 'GROUP'
-                    ? 'Group Chat'
-                    : 'Direct Message'}
+                  {typingUsers.length > 0
+                    ? `${typingUsers.join(', ')} ${typingUsers.length > 1 ? 'are' : 'is'} typing...`
+                    : currentRoom.roomType === 'GROUP'
+                      ? 'Group Chat'
+                      : 'Direct Message'}
                 </div>
               </div>
             </header>
@@ -193,7 +303,8 @@ export default function Dashboard() {
                 type="text"
                 className="input message-input"
                 value={messageInput}
-                onChange={(e) => setMessageInput(e.target.value)}
+                onChange={(e) => handleMessageInputChange(e.target.value)}
+                onBlur={stopTyping}
                 placeholder="Type a message..."
               />
               <button type="submit" className="btn btn-primary send-btn">

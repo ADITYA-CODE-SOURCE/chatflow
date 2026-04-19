@@ -35,6 +35,13 @@ export interface Message {
   isRead: boolean;
 }
 
+export interface TypingIndicator {
+  chatRoomId: string;
+  userId: string;
+  userName: string;
+  typing: boolean;
+}
+
 export interface AuthResponse {
   accessToken: string;
   refreshToken: string;

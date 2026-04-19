@@ -2,6 +2,7 @@ package com.chatflow.service;
 
 import com.chatflow.dto.ChatRoomDto;
 import com.chatflow.dto.MessageDto;
+import com.chatflow.dto.TypingIndicatorDto;
 import com.chatflow.dto.UserDto;
 import com.chatflow.entity.*;
 import com.chatflow.repository.*;
@@ -127,6 +128,25 @@ public class ChatService {
         messagingTemplate.convertAndSend("/topic/chat/" + roomId, messageDto);
         
         return messageDto;
+    }
+
+    @Transactional(readOnly = true)
+    public void sendTypingIndicator(UUID roomId, User user, boolean typing) {
+        ChatRoom room = chatRoomRepository.findById(roomId)
+                .orElseThrow(() -> new RuntimeException("Chat room not found"));
+
+        if (!chatParticipantRepository.existsByChatRoomAndUser(room, user)) {
+            throw new RuntimeException("Not a participant of this chat room");
+        }
+
+        TypingIndicatorDto typingIndicator = TypingIndicatorDto.builder()
+                .chatRoomId(roomId)
+                .userId(user.getId())
+                .userName(user.getDisplayName())
+                .typing(typing)
+                .build();
+
+        messagingTemplate.convertAndSend("/topic/chat/" + roomId + "/typing", typingIndicator);
     }
     
     @Transactional(readOnly = true)
