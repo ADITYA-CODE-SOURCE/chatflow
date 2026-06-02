@@ -1,0 +1,115 @@
+.newchat-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.newchat-close {
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 22px;
+  line-height: 1;
+  padding: 6px 10px;
+  border-radius: 10px;
+}
+
+.newchat-close:hover {
+  background: var(--surface-hover);
+  color: var(--text-primary);
+}
+
+.newchat-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.newchat-tabs button {
+  flex: 1;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: var(--background);
+  color: var(--text-secondary);
+}
+
+.newchat-tabs button.active {
+  background: var(--primary);
+  color: white;
+}
+
+.newchat-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.newchat-label {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.newchat-results {
+  margin-top: 6px;
+  max-height: 280px;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.newchat-hint {
+  color: var(--text-secondary);
+  font-size: 13px;
+  padding: 10px;
+}
+
+.newchat-user {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px;
+  border-radius: 12px;
+  background: var(--background);
+}
+
+.newchat-user:hover {
+  background: var(--surface-hover);
+}
+
+.newchat-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  display: grid;
+  place-items: center;
+  background: var(--secondary);
+  color: white;
+  font-weight: 700;
+}
+
+.newchat-userinfo {
+  flex: 1;
+  min-width: 0;
+}
+
+.newchat-name {
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.newchat-email {
+  font-size: 12px;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.newchat-action {
+  font-size: 12px;
+  color: var(--primary);
+  font-weight: 700;
+}

@@ -17,20 +17,22 @@ export default function Login() {
     
     try {
       const response = await authApi.login({ email, password });
-      console.log('Auth response:', response.data);
       setAuth(response.data.user, response.data.accessToken, response.data.refreshToken);
+      const pendingInvite = sessionStorage.getItem('pending-invite-code');
+      if (pendingInvite) {
+        sessionStorage.removeItem('pending-invite-code');
+        navigate(`/join/${pendingInvite}`);
+        return;
+      }
       navigate('/');
     } catch (err: any) {
-      console.log('Full error:', err);
-      console.log('Response:', err.response);
-      console.log('Request:', err.request);
-      if (err.response) {
-        setError('Server: ' + (err.response.data?.message || err.response.statusText));
-      } else if (err.request) {
-        setError('Network error - check console');
-      } else {
-        setError(err.message);
+      if (err.response?.status === 403) {
+        localStorage.removeItem('auth-storage');
+        setError('Session expired. Please try again.');
+        return;
       }
+
+      setError(err.response?.data?.message || err.message || 'Login failed');
     }
   };
 
@@ -39,6 +41,9 @@ export default function Login() {
       <div className="auth-card">
         <h1>Welcome Back</h1>
         <p>Sign in to continue</p>
+        {sessionStorage.getItem('pending-invite-code') && (
+          <div className="auth-hint">Sign in to join your invited group.</div>
+        )}
         
         {error && <div className="error-message">{error}</div>}
         

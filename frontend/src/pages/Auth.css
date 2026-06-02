@@ -27,6 +27,16 @@
   margin-bottom: 24px;
 }
 
+.auth-hint {
+  margin-bottom: 16px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: rgba(99, 102, 241, 0.12);
+  color: var(--text-primary);
+  font-size: 13px;
+  text-align: center;
+}
+
 .form-group {
   margin-bottom: 20px;
 }

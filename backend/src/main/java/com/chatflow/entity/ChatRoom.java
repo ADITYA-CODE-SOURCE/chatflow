@@ -25,6 +25,15 @@ public class ChatRoom {
     
     @Column(name = "avatar_url", columnDefinition = "TEXT")
     private String avatarUrl;
+
+    @Column(name = "invite_code", unique = true, length = 32)
+    private String inviteCode;
+
+    @Column(name = "invite_code_expires_at")
+    private Instant inviteCodeExpiresAt;
+
+    @Column(name = "pinned_message_id")
+    private UUID pinnedMessageId;
     
     @Enumerated(EnumType.STRING)
     @Column(name = "room_type", nullable = false)
@@ -44,6 +53,13 @@ public class ChatRoom {
     protected void onCreate() {
         createdAt = Instant.now();
         updatedAt = Instant.now();
+
+        if (roomType == RoomType.GROUP && (inviteCode == null || inviteCode.isBlank())) {
+            inviteCode = java.util.UUID.randomUUID().toString().replace("-", "").substring(0, 12);
+        }
+        if (roomType == RoomType.GROUP && inviteCodeExpiresAt == null) {
+            inviteCodeExpiresAt = Instant.now().plusSeconds(60L * 60 * 24 * 30);
+        }
     }
     
     @PreUpdate

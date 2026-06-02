@@ -23,4 +23,11 @@ public class MessageDto {
     private String attachmentUrl;
     private Instant createdAt;
     private boolean isRead;
+    private UUID replyToMessageId;
+    private String replyToSenderName;
+    private String replyToContent;
+    private Instant editedAt;
+    private boolean deleted;
+    private int readByCount;
+    private java.util.List<String> seenByNames;
 }

@@ -34,6 +34,9 @@ public class ChatParticipant {
     
     @Column(name = "last_read_message_id")
     private UUID lastReadMessageId;
+
+    @Column(name = "notifications_muted")
+    private boolean notificationsMuted;
     
     @PrePersist
     protected void onCreate() {

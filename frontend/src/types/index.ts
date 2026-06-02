@@ -14,12 +14,17 @@ export interface ChatRoom {
   name?: string;
   description?: string;
   avatarUrl?: string;
+  inviteCode?: string;
+  inviteCodeExpiresAt?: string;
   roomType: 'DIRECT' | 'GROUP';
   createdBy: string;
   createdByName: string;
   createdAt: string;
   unreadCount: number;
+  memberCount: number;
+  muted: boolean;
   lastMessage?: Message;
+  pinnedMessage?: Message;
 }
 
 export interface Message {
@@ -29,10 +34,17 @@ export interface Message {
   senderName: string;
   senderAvatarUrl?: string;
   content: string;
-  messageType: 'TEXT' | 'IMAGE' | 'FILE';
+  messageType: 'TEXT' | 'IMAGE' | 'FILE' | 'SYSTEM';
   attachmentUrl?: string;
   createdAt: string;
   isRead: boolean;
+  replyToMessageId?: string;
+  replyToSenderName?: string;
+  replyToContent?: string;
+  editedAt?: string;
+  deleted: boolean;
+  readByCount: number;
+  seenByNames: string[];
 }
 
 export interface TypingIndicator {
@@ -46,4 +58,11 @@ export interface AuthResponse {
   accessToken: string;
   refreshToken: string;
   user: User;
+}
+
+export interface GroupInvite {
+  groupId: string;
+  inviteCode: string;
+  inviteLink: string;
+  expiresAt?: string;
 }

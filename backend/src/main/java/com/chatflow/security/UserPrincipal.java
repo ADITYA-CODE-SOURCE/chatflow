@@ -2,7 +2,6 @@ package com.chatflow.security;
 
 import com.chatflow.entity.User;
 import lombok.Getter;
-import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 import java.util.Collection;
@@ -10,9 +9,12 @@ import java.util.Collections;
 import java.util.UUID;
 
 @Getter
-@RequiredArgsConstructor
 public class UserPrincipal implements UserDetails {
     private final User user;
+
+    public UserPrincipal(User user) {
+        this.user = user;
+    }
     
     public UUID getId() {
         return user.getId();

@@ -19,9 +19,25 @@ export default function Register() {
     try {
       const response = await authApi.register({ email, password, displayName });
       setAuth(response.data.user, response.data.accessToken, response.data.refreshToken);
+      const pendingInvite = sessionStorage.getItem('pending-invite-code');
+      if (pendingInvite) {
+        sessionStorage.removeItem('pending-invite-code');
+        navigate(`/join/${pendingInvite}`);
+        return;
+      }
       navigate('/');
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Registration failed');
+      if (err.response?.status === 400 && err.response?.data?.message === 'Email already exists') {
+        setError('Account already exists. Please sign in.');
+        return;
+      }
+
+      if (err.response?.status === 403) {
+        setError('Not allowed. If you are already logged in, logout and try again.');
+        return;
+      }
+
+      setError(err.response?.data?.message || err.message || 'Registration failed');
     }
   };
 
@@ -30,6 +46,9 @@ export default function Register() {
       <div className="auth-card">
         <h1>Create Account</h1>
         <p>Join ChatFlow today</p>
+        {sessionStorage.getItem('pending-invite-code') && (
+          <div className="auth-hint">Create an account to join your invited group.</div>
+        )}
         
         {error && <div className="error-message">{error}</div>}
         

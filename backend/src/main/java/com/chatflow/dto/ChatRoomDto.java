@@ -23,6 +23,11 @@ public class ChatRoomDto {
     private UUID createdBy;
     private String createdByName;
     private Instant createdAt;
+    private String inviteCode;
+    private Instant inviteCodeExpiresAt;
     private int unreadCount;
+    private int memberCount;
+    private boolean muted;
     private MessageDto lastMessage;
+    private MessageDto pinnedMessage;
 }

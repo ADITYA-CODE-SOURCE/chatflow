@@ -21,4 +21,6 @@ public interface ChatRoomRepository extends JpaRepository<ChatRoom, UUID> {
     
     @Query("SELECT cr FROM ChatRoom cr JOIN ChatParticipant cp1 ON cp1.chatRoom = cr JOIN ChatParticipant cp2 ON cp2.chatRoom = cr WHERE cr.roomType = 'DIRECT' AND cp1.user = :user1 AND cp2.user = :user2")
     Optional<ChatRoom> findDirectRoom(@Param("user1") User user1, @Param("user2") User user2);
+
+    Optional<ChatRoom> findByInviteCode(String inviteCode);
 }

@@ -24,6 +24,10 @@ public class Message {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "sender_id", nullable = false)
     private User sender;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "reply_to_message_id")
+    private Message replyToMessage;
     
     @Column(nullable = false, columnDefinition = "TEXT")
     private String content;
@@ -37,6 +41,12 @@ public class Message {
     
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
+
+    @Column(name = "edited_at")
+    private Instant editedAt;
+
+    @Column(name = "deleted_at")
+    private Instant deletedAt;
     
     @PrePersist
     protected void onCreate() {
@@ -44,6 +54,6 @@ public class Message {
     }
     
     public enum MessageType {
-        TEXT, IMAGE, FILE
+        TEXT, IMAGE, FILE, SYSTEM
     }
 }

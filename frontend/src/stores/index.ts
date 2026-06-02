@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { persist, createJSONStorage } from 'zustand/middleware';
 import type { User, ChatRoom, Message } from '../types';
 
 interface AuthState {
@@ -17,17 +17,16 @@ export const useAuthStore = create<AuthState>()(
       accessToken: null,
       refreshToken: null,
       setAuth: (user, accessToken, refreshToken) => {
-        localStorage.setItem('accessToken', accessToken);
-        localStorage.setItem('refreshToken', refreshToken);
         set({ user, accessToken, refreshToken });
       },
       logout: () => {
-        localStorage.removeItem('accessToken');
-        localStorage.removeItem('refreshToken');
         set({ user: null, accessToken: null, refreshToken: null });
       },
     }),
-    { name: 'auth-storage' }
+    {
+      name: 'auth-storage',
+      storage: createJSONStorage(() => localStorage),
+    }
   )
 );
 
@@ -39,6 +38,10 @@ interface ChatState {
   setCurrentRoom: (room: ChatRoom | null) => void;
   addMessage: (message: Message) => void;
   setMessages: (messages: Message[]) => void;
+  updateChatRoom: (roomId: string, updater: (room: ChatRoom) => ChatRoom) => void;
+  removeChatRoom: (roomId: string) => void;
+  upsertChatRoom: (room: ChatRoom) => void;
+  updateMessage: (messageId: string, updater: (message: Message) => Message) => void;
 }
 
 export const useChatStore = create<ChatState>()((set) => ({
@@ -50,4 +53,36 @@ export const useChatStore = create<ChatState>()((set) => ({
   addMessage: (message) =>
     set((state) => ({ messages: [...state.messages, message] })),
   setMessages: (messages) => set({ messages }),
+  updateChatRoom: (roomId, updater) =>
+    set((state) => {
+      const chatRooms = state.chatRooms.map((room) =>
+        room.id === roomId ? updater(room) : room
+      );
+      const currentRoom = state.currentRoom?.id === roomId
+        ? updater(state.currentRoom)
+        : state.currentRoom;
+
+      return { chatRooms, currentRoom };
+    }),
+  removeChatRoom: (roomId) =>
+    set((state) => ({
+      chatRooms: state.chatRooms.filter((room) => room.id !== roomId),
+      currentRoom: state.currentRoom?.id === roomId ? null : state.currentRoom,
+      messages: state.currentRoom?.id === roomId ? [] : state.messages,
+    })),
+  upsertChatRoom: (nextRoom) =>
+    set((state) => {
+      const existing = state.chatRooms.some((room) => room.id === nextRoom.id);
+      const chatRooms = existing
+        ? state.chatRooms.map((room) => (room.id === nextRoom.id ? nextRoom : room))
+        : [nextRoom, ...state.chatRooms];
+      const currentRoom = state.currentRoom?.id === nextRoom.id ? nextRoom : state.currentRoom;
+      return { chatRooms, currentRoom };
+    }),
+  updateMessage: (messageId, updater) =>
+    set((state) => ({
+      messages: state.messages.map((message) =>
+        message.id === messageId ? updater(message) : message
+      ),
+    })),
 }));
