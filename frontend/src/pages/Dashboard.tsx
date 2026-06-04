@@ -576,6 +576,11 @@ export default function Dashboard() {
           </div>
         </div>
 
+        <div className="sidebar-section-label">
+          <span>Conversations</span>
+          <strong>{sortedRooms.length}</strong>
+        </div>
+
         <div className="chat-room-list">
           {sortedRooms.map((room) => (
             <div
@@ -589,6 +594,12 @@ export default function Dashboard() {
               <div className="chat-room-info">
                 <div className="chat-room-name-row">
                   <div className="chat-room-name">{room.name}</div>
+                  <div className="chat-room-flags">
+                    <span className={`chat-room-kind chat-room-kind-${room.roomType.toLowerCase()}`}>
+                      {room.roomType === 'GROUP' ? 'Group' : 'Direct'}
+                    </span>
+                    {room.muted && <span className="chat-room-muted">Muted</span>}
+                  </div>
                   {room.lastMessage?.createdAt && (
                     <div className="chat-room-time">
                       {new Date(room.lastMessage.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
@@ -596,7 +607,6 @@ export default function Dashboard() {
                   )}
                 </div>
                 <div className="chat-room-preview">
-                  {room.muted ? 'Muted · ' : ''}
                   {room.lastMessage?.messageType === 'IMAGE' ? 'Image' : room.lastMessage?.content || 'No messages yet'}
                 </div>
               </div>
@@ -624,6 +634,7 @@ export default function Dashboard() {
           <>
             <header className="chat-header">
               <div className="chat-header-info">
+                <div className="chat-header-pill">{currentRoom.roomType === 'GROUP' ? 'Shared space' : 'Direct chat'}</div>
                 <div className="chat-header-name">{currentRoom.name}</div>
                 <div className="chat-header-status">{currentStatus}</div>
               </div>
@@ -668,7 +679,8 @@ export default function Dashboard() {
             {currentRoom.pinnedMessage && (
               <div className="pinned-banner">
                 <div>
-                  <strong>Pinned</strong> {currentRoom.pinnedMessage.content}
+                  <strong>Pinned message</strong>
+                  <span>{currentRoom.pinnedMessage.content}</span>
                 </div>
                 <button type="button" className="invite-copy" onClick={() => handlePinMessage(undefined)}>
                   Clear
@@ -678,6 +690,7 @@ export default function Dashboard() {
 
             {searchResults.length > 0 && (
               <div className="search-results-panel">
+                <div className="search-results-heading">Search results</div>
                 {searchResults.map((message) => (
                   <div key={message.id} className="search-result-card">
                     <div className="search-result-title">{message.senderName}</div>
@@ -688,6 +701,7 @@ export default function Dashboard() {
             )}
 
             <div className="messages-container">
+              <div className="messages-stack">
               {messages.map((message) => {
                 const isOwn = message.senderId === user.id;
                 const canEdit = isOwn && message.messageType !== 'SYSTEM' && !message.deleted;
@@ -748,6 +762,7 @@ export default function Dashboard() {
                 );
               })}
               <div ref={messagesEndRef} />
+              </div>
             </div>
 
             {replyTarget && (
@@ -824,8 +839,9 @@ export default function Dashboard() {
           </>
         ) : (
           <div className="no-chat-selected">
+            <div className="no-chat-illustration">C</div>
             <h3>Select a conversation</h3>
-            <p>Choose a chat from the sidebar or create a new one</p>
+            <p>Choose a chat from the sidebar, start a DM, or create a fresh group space.</p>
           </div>
         )}
       </main>

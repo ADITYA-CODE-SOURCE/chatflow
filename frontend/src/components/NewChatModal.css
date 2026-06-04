@@ -5,6 +5,10 @@
   margin-bottom: 12px;
 }
 
+.newchat-header h3 {
+  letter-spacing: -0.02em;
+}
+
 .newchat-close {
   background: transparent;
   color: var(--text-secondary);
@@ -29,13 +33,15 @@
   flex: 1;
   padding: 10px 12px;
   border-radius: 12px;
-  background: var(--background);
+  background: rgba(7, 17, 31, 0.72);
   color: var(--text-secondary);
+  border: 1px solid transparent;
 }
 
 .newchat-tabs button.active {
-  background: var(--primary);
+  background: linear-gradient(135deg, var(--primary), var(--primary-hover));
   color: white;
+  box-shadow: 0 12px 26px rgba(47, 111, 237, 0.24);
 }
 
 .newchat-panel {
@@ -70,11 +76,15 @@
   gap: 10px;
   padding: 10px;
   border-radius: 12px;
-  background: var(--background);
+  background: rgba(7, 17, 31, 0.68);
+  border: 1px solid var(--border);
+  transition: transform 0.2s ease, border-color 0.2s ease, background 0.2s ease;
 }
 
 .newchat-user:hover {
-  background: var(--surface-hover);
+  background: rgba(47, 111, 237, 0.08);
+  border-color: rgba(47, 111, 237, 0.24);
+  transform: translateY(-1px);
 }
 
 .newchat-avatar {

@@ -4,21 +4,27 @@
   align-items: center;
   justify-content: center;
   padding: 20px;
+  background:
+    radial-gradient(circle at top left, rgba(47, 111, 237, 0.16), transparent 32%),
+    radial-gradient(circle at bottom right, rgba(23, 184, 166, 0.14), transparent 28%);
 }
 
 .auth-card {
-  background: var(--surface);
+  background: linear-gradient(180deg, rgba(18, 35, 58, 0.95), rgba(10, 20, 35, 0.92));
   padding: 40px;
-  border-radius: 16px;
+  border-radius: 24px;
   width: 100%;
-  max-width: 400px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  max-width: 430px;
+  border: 1px solid rgba(144, 176, 214, 0.18);
+  box-shadow: var(--shadow-soft);
+  backdrop-filter: blur(12px);
 }
 
 .auth-card h1 {
-  font-size: 28px;
+  font-size: 30px;
   margin-bottom: 8px;
   text-align: center;
+  letter-spacing: -0.03em;
 }
 
 .auth-card > p {
@@ -31,7 +37,8 @@
   margin-bottom: 16px;
   padding: 10px 12px;
   border-radius: 10px;
-  background: rgba(99, 102, 241, 0.12);
+  background: rgba(47, 111, 237, 0.14);
+  border: 1px solid rgba(47, 111, 237, 0.2);
   color: var(--text-primary);
   font-size: 13px;
   text-align: center;
@@ -53,6 +60,7 @@
   padding: 14px;
   font-size: 16px;
   margin-top: 8px;
+  min-height: 50px;
 }
 
 .auth-switch {
@@ -62,11 +70,18 @@
 }
 
 .error-message {
-  background: rgba(239, 68, 68, 0.1);
-  border: 1px solid var(--error);
-  color: var(--error);
+  background: rgba(239, 68, 68, 0.12);
+  border: 1px solid rgba(239, 68, 68, 0.4);
+  color: #fecaca;
   padding: 12px;
-  border-radius: 8px;
+  border-radius: 12px;
   margin-bottom: 20px;
   font-size: 14px;
+}
+
+@media (max-width: 520px) {
+  .auth-card {
+    padding: 28px 22px;
+    border-radius: 20px;
+  }
 }
