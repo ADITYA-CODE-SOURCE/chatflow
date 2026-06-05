@@ -5,19 +5,23 @@ import com.chatflow.dto.UserDto;
 import com.chatflow.entity.User;
 import com.chatflow.repository.UserRepository;
 import com.chatflow.security.JwtUtil;
-import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.util.UUID;
 
 @Service
-@RequiredArgsConstructor
 public class AuthService {
     
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtUtil jwtUtil;
+
+    public AuthService(UserRepository userRepository, PasswordEncoder passwordEncoder, JwtUtil jwtUtil) {
+        this.userRepository = userRepository;
+        this.passwordEncoder = passwordEncoder;
+        this.jwtUtil = jwtUtil;
+    }
     
     @Transactional
     public AuthDto.AuthResponse register(AuthDto.RegisterRequest request) {

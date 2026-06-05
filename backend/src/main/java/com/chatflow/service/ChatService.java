@@ -7,7 +7,6 @@ import com.chatflow.entity.Message;
 import com.chatflow.entity.User;
 import com.chatflow.entity.UserPresence;
 import com.chatflow.repository.*;
-import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
@@ -21,7 +20,6 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
-@RequiredArgsConstructor
 public class ChatService {
 
     private final ChatRoomRepository chatRoomRepository;
@@ -30,6 +28,21 @@ public class ChatService {
     private final UserRepository userRepository;
     private final UserPresenceRepository userPresenceRepository;
     private final SimpMessagingTemplate messagingTemplate;
+
+    public ChatService(
+            ChatRoomRepository chatRoomRepository,
+            ChatParticipantRepository chatParticipantRepository,
+            MessageRepository messageRepository,
+            UserRepository userRepository,
+            UserPresenceRepository userPresenceRepository,
+            SimpMessagingTemplate messagingTemplate) {
+        this.chatRoomRepository = chatRoomRepository;
+        this.chatParticipantRepository = chatParticipantRepository;
+        this.messageRepository = messageRepository;
+        this.userRepository = userRepository;
+        this.userPresenceRepository = userPresenceRepository;
+        this.messagingTemplate = messagingTemplate;
+    }
 
     @Value("${app.frontend-url:http://localhost:5173}")
     private String frontendUrl;
@@ -154,32 +167,33 @@ public class ChatService {
 
     @Transactional
     public ChatRoomDto createDirectChat(User user1, User user2) {
-        return chatRoomRepository.findDirectRoom(user1, user2)
-                .map(room -> mapToDto(room, user1, user2))
-                .orElseGet(() -> {
-                    ChatRoom room = ChatRoom.builder()
-                            .roomType(ChatRoom.RoomType.DIRECT)
-                            .createdBy(user1)
-                            .build();
+        List<ChatRoom> existingDirectRooms = chatRoomRepository.findDirectRooms(user1, user2);
+        if (!existingDirectRooms.isEmpty()) {
+            return mapToDto(existingDirectRooms.get(0), user1, user2);
+        }
 
-                    ChatRoom savedRoom = chatRoomRepository.save(room);
+        ChatRoom room = ChatRoom.builder()
+                .roomType(ChatRoom.RoomType.DIRECT)
+                .createdBy(user1)
+                .build();
 
-                    chatParticipantRepository.save(ChatParticipant.builder()
-                            .chatRoom(savedRoom)
-                            .user(user1)
-                            .role(ChatParticipant.Role.MEMBER)
-                            .notificationsMuted(false)
-                            .build());
+        ChatRoom savedRoom = chatRoomRepository.save(room);
 
-                    chatParticipantRepository.save(ChatParticipant.builder()
-                            .chatRoom(savedRoom)
-                            .user(user2)
-                            .role(ChatParticipant.Role.MEMBER)
-                            .notificationsMuted(false)
-                            .build());
+        chatParticipantRepository.save(ChatParticipant.builder()
+                .chatRoom(savedRoom)
+                .user(user1)
+                .role(ChatParticipant.Role.MEMBER)
+                .notificationsMuted(false)
+                .build());
 
-                    return mapToDto(savedRoom, user1, user2);
-                });
+        chatParticipantRepository.save(ChatParticipant.builder()
+                .chatRoom(savedRoom)
+                .user(user2)
+                .role(ChatParticipant.Role.MEMBER)
+                .notificationsMuted(false)
+                .build());
+
+        return mapToDto(savedRoom, user1, user2);
     }
 
     @Transactional

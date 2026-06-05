@@ -4,7 +4,6 @@ import com.chatflow.dto.PresenceDto;
 import com.chatflow.entity.User;
 import com.chatflow.entity.UserPresence;
 import com.chatflow.repository.UserPresenceRepository;
-import lombok.RequiredArgsConstructor;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -13,11 +12,15 @@ import java.time.Instant;
 import java.util.UUID;
 
 @Service
-@RequiredArgsConstructor
 public class PresenceService {
 
     private final UserPresenceRepository userPresenceRepository;
     private final SimpMessagingTemplate messagingTemplate;
+
+    public PresenceService(UserPresenceRepository userPresenceRepository, SimpMessagingTemplate messagingTemplate) {
+        this.userPresenceRepository = userPresenceRepository;
+        this.messagingTemplate = messagingTemplate;
+    }
 
     @Transactional
     public void setOnline(User user, boolean online) {

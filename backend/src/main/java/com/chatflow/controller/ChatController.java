@@ -15,7 +15,6 @@ import com.chatflow.entity.User;
 import com.chatflow.security.UserPrincipal;
 import com.chatflow.service.ChatService;
 import jakarta.validation.Valid;
-import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -26,10 +25,13 @@ import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/chat-rooms")
-@RequiredArgsConstructor
 public class ChatController {
     
     private final ChatService chatService;
+
+    public ChatController(ChatService chatService) {
+        this.chatService = chatService;
+    }
     
     @GetMapping
     public ResponseEntity<List<ChatRoomDto>> getChatRooms(@AuthenticationPrincipal UserPrincipal principal) {

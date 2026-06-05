@@ -24,13 +24,24 @@
 }
 
 body {
-  font-family: Inter, 'Segoe UI', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  font-family: 'Plus Jakarta Sans', 'Segoe UI', 'Helvetica Neue', sans-serif;
   background:
     radial-gradient(circle at top left, rgba(47, 111, 237, 0.2), transparent 34%),
     radial-gradient(circle at top right, rgba(23, 184, 166, 0.16), transparent 28%),
     linear-gradient(160deg, #07111f 0%, #0b1628 45%, #0c1830 100%);
   color: var(--text-primary);
   min-height: 100vh;
+}
+
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background-image: linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px), linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+  background-size: 32px 32px;
+  mask-image: radial-gradient(circle at center, black 30%, transparent 85%);
+  opacity: 0.3;
 }
 
 #root {
@@ -65,6 +76,7 @@ a {
   border-radius: 12px;
   font-weight: 600;
   transition: all 0.2s ease, transform 0.2s ease;
+  border: 1px solid transparent;
 }
 
 .btn-primary {
@@ -98,6 +110,27 @@ a {
 
 .input::placeholder {
   color: var(--text-secondary);
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(7, 17, 31, 0.4);
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(140, 170, 210, 0.28);
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(140, 170, 210, 0.42);
+  background-clip: padding-box;
 }
 
 button:disabled,

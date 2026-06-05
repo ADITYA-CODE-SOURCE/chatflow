@@ -4,7 +4,6 @@ import com.chatflow.dto.ChatRoomDto;
 import com.chatflow.dto.GroupInviteDto;
 import com.chatflow.security.UserPrincipal;
 import com.chatflow.service.ChatService;
-import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -17,10 +16,13 @@ import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/groups")
-@RequiredArgsConstructor
 public class GroupController {
 
     private final ChatService chatService;
+
+    public GroupController(ChatService chatService) {
+        this.chatService = chatService;
+    }
 
     @GetMapping("/{groupId}/invite")
     public ResponseEntity<GroupInviteDto> getInvite(

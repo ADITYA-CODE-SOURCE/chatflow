@@ -1,17 +1,25 @@
 import axios from 'axios';
 import type { AuthResponse, User, ChatRoom, Message, GroupInvite } from '../types';
 
-export const API_ORIGIN = 'http://localhost:8080';
+function trimTrailingSlash(value: string) {
+  return value.endsWith('/') ? value.slice(0, -1) : value;
+}
+
+const configuredApiBaseUrl = (import.meta.env.VITE_API_BASE_URL || '').trim();
+export const API_ORIGIN = trimTrailingSlash(configuredApiBaseUrl);
+export const API_BASE_URL = API_ORIGIN ? `${API_ORIGIN}/api` : '/api';
+export const WS_ENDPOINT = API_ORIGIN ? `${API_ORIGIN}/ws` : '/ws';
 
 export function resolveMediaUrl(url?: string | null) {
   if (!url) return '';
   if (url.startsWith('http://') || url.startsWith('https://')) return url;
+  if (!API_ORIGIN) return url;
   if (url.startsWith('/')) return `${API_ORIGIN}${url}`;
   return `${API_ORIGIN}/${url}`;
 }
 
 const api = axios.create({
-  baseURL: '/api',
+  baseURL: API_BASE_URL,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -63,7 +71,7 @@ api.interceptors.response.use(
       })();
       if (refreshToken) {
         try {
-          const response = await axios.post('/api/auth/refresh', { refreshToken });
+          const response = await axios.post(`${API_BASE_URL}/auth/refresh`, { refreshToken });
           // Update zustand persisted auth state.
           try {
             const raw = localStorage.getItem('auth-storage');

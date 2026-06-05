@@ -5,7 +5,6 @@ import com.chatflow.entity.User;
 import com.chatflow.entity.UserPresence;
 import com.chatflow.repository.UserPresenceRepository;
 import com.chatflow.repository.UserRepository;
-import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
@@ -13,11 +12,15 @@ import org.springframework.stereotype.Service;
 import java.util.UUID;
 
 @Service
-@RequiredArgsConstructor
 public class UserService {
 
     private final UserRepository userRepository;
     private final UserPresenceRepository userPresenceRepository;
+
+    public UserService(UserRepository userRepository, UserPresenceRepository userPresenceRepository) {
+        this.userRepository = userRepository;
+        this.userPresenceRepository = userPresenceRepository;
+    }
 
     public UserDto toDto(User user) {
         UserPresence presence = userPresenceRepository.findByUserId(user.getId());

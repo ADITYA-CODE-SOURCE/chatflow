@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Client } from '@stomp/stompjs';
 import SockJS from 'sockjs-client';
 import EmojiPicker, { EmojiClickData } from 'emoji-picker-react';
-import { chatApi, presenceApi, resolveMediaUrl } from '../services/api';
+import { chatApi, presenceApi, resolveMediaUrl, WS_ENDPOINT } from '../services/api';
 import { useAuthStore, useChatStore } from '../stores';
 import type { ChatRoom, Message, TypingIndicator, User } from '../types';
 import NewChatModal from '../components/NewChatModal';
@@ -78,6 +78,7 @@ export default function Dashboard() {
   const [toast, setToast] = useState<ToastState | null>(null);
   const [createGroupLoading, setCreateGroupLoading] = useState(false);
   const [createGroupError, setCreateGroupError] = useState('');
+  const [showSidebarMobile, setShowSidebarMobile] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const stompClientRef = useRef<Client | null>(null);
@@ -273,7 +274,7 @@ export default function Dashboard() {
 
   useEffect(() => {
     const client = new Client({
-      webSocketFactory: () => new SockJS('/ws'),
+      webSocketFactory: () => new SockJS(WS_ENDPOINT),
       reconnectDelay: 3000,
       onConnect: () => {
         subscribeGlobal();
@@ -303,6 +304,7 @@ export default function Dashboard() {
 
   useEffect(() => {
     if (!currentRoom) return;
+    setShowSidebarMobile(false);
     void loadMessages(currentRoom.id);
     setTypingUsers([]);
     setReplyTarget(null);
@@ -557,7 +559,7 @@ export default function Dashboard() {
 
   return (
     <div className="dashboard">
-      <aside className="sidebar">
+      <aside className={`sidebar ${showSidebarMobile ? 'sidebar-open' : ''}`}>
         <div className="sidebar-header">
           <div className="sidebar-brand">
             <div className="sidebar-brand-mark">C</div>
@@ -586,7 +588,10 @@ export default function Dashboard() {
             <div
               key={room.id}
               className={`chat-room-item ${currentRoom?.id === room.id ? 'active' : ''}`}
-              onClick={() => setCurrentRoom(room)}
+              onClick={() => {
+                setCurrentRoom(room);
+                setShowSidebarMobile(false);
+              }}
             >
               <div className="chat-room-avatar">
                 {room.avatarUrl ? <img src={room.avatarUrl} alt={room.name} /> : <span>{room.name?.charAt(0).toUpperCase()}</span>}
@@ -600,17 +605,21 @@ export default function Dashboard() {
                     </span>
                     {room.muted && <span className="chat-room-muted">Muted</span>}
                   </div>
-                  {room.lastMessage?.createdAt && (
-                    <div className="chat-room-time">
-                      {new Date(room.lastMessage.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                    </div>
-                  )}
                 </div>
-                <div className="chat-room-preview">
-                  {room.lastMessage?.messageType === 'IMAGE' ? 'Image' : room.lastMessage?.content || 'No messages yet'}
+                <div className="chat-room-bottom-row">
+                  <div className="chat-room-preview">
+                    {room.lastMessage?.messageType === 'IMAGE' ? 'Image' : room.lastMessage?.content || 'No messages yet'}
+                  </div>
+                  <div className="chat-room-meta">
+                    {room.lastMessage?.createdAt && (
+                      <div className="chat-room-time">
+                        {new Date(room.lastMessage.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      </div>
+                    )}
+                    {room.unreadCount > 0 && <div className="unread-badge">{room.unreadCount}</div>}
+                  </div>
                 </div>
               </div>
-              {room.unreadCount > 0 && <div className="unread-badge">{room.unreadCount}</div>}
             </div>
           ))}
         </div>
@@ -634,6 +643,13 @@ export default function Dashboard() {
           <>
             <header className="chat-header">
               <div className="chat-header-info">
+                <button
+                  type="button"
+                  className="mobile-sidebar-toggle"
+                  onClick={() => setShowSidebarMobile((value) => !value)}
+                >
+                  {showSidebarMobile ? 'Close chats' : 'Open chats'}
+                </button>
                 <div className="chat-header-pill">{currentRoom.roomType === 'GROUP' ? 'Shared space' : 'Direct chat'}</div>
                 <div className="chat-header-name">{currentRoom.name}</div>
                 <div className="chat-header-status">{currentStatus}</div>
@@ -722,23 +738,25 @@ export default function Dashboard() {
                         </div>
                       )}
 
-                      {message.replyToContent && (
-                        <div className="message-reply-quote">
-                          <strong>{message.replyToSenderName}</strong>
-                          <span>{message.replyToContent}</span>
-                        </div>
-                      )}
+                      <div className="message-body-shell">
+                        {message.replyToContent && (
+                          <div className="message-reply-quote">
+                            <strong>{message.replyToSenderName}</strong>
+                            <span>{message.replyToContent}</span>
+                          </div>
+                        )}
 
-                      {message.messageType === 'SYSTEM' ? (
-                        <div className="system-message-pill">{message.content}</div>
-                      ) : message.messageType === 'IMAGE' && message.attachmentUrl ? (
-                        <div className="message-text message-media">
-                          <img className="message-image" src={message.attachmentUrl} alt="shared" onClick={() => setLightboxImage(message.attachmentUrl || null)} />
-                          {message.content && <div className="message-caption">{message.content}</div>}
-                        </div>
-                      ) : (
-                        <div className={`message-text ${message.deleted ? 'message-deleted' : ''}`}>{message.content}</div>
-                      )}
+                        {message.messageType === 'SYSTEM' ? (
+                          <div className="system-message-pill">{message.content}</div>
+                        ) : message.messageType === 'IMAGE' && message.attachmentUrl ? (
+                          <div className="message-text message-media">
+                            <img className="message-image" src={message.attachmentUrl} alt="shared" onClick={() => setLightboxImage(message.attachmentUrl || null)} />
+                            {message.content && <div className="message-caption">{message.content}</div>}
+                          </div>
+                        ) : (
+                          <div className={`message-text ${message.deleted ? 'message-deleted' : ''}`}>{message.content}</div>
+                        )}
+                      </div>
 
                       {message.messageType !== 'SYSTEM' && (
                         <div className="message-actions-row">
@@ -796,35 +814,37 @@ export default function Dashboard() {
             )}
 
             <form className="message-input-form" onSubmit={handleSendMessage}>
-              <label className="attach-btn" title="Attach image">
-                📷
+              <div className="composer-main">
+                <label className="attach-btn" title="Attach image">
+                  📷
+                  <input
+                    type="file"
+                    accept="image/jpeg,image/png,image/gif,image/webp"
+                    style={{ display: 'none' }}
+                    onChange={(e) => onPickImage(e.target.files?.[0] || null)}
+                  />
+                </label>
+
+                <div className="emoji-wrap">
+                  <button type="button" className="emoji-btn" onClick={() => setShowEmoji((v) => !v)} aria-label="Emoji">
+                    🙂
+                  </button>
+                  {showEmoji && (
+                    <div className="emoji-popover">
+                      <EmojiPicker onEmojiClick={onEmojiClick} height={360} width={300} />
+                    </div>
+                  )}
+                </div>
+
                 <input
-                  type="file"
-                  accept="image/jpeg,image/png,image/gif,image/webp"
-                  style={{ display: 'none' }}
-                  onChange={(e) => onPickImage(e.target.files?.[0] || null)}
+                  type="text"
+                  className="input message-input"
+                  value={messageInput}
+                  onChange={(e) => handleMessageInputChange(e.target.value)}
+                  onBlur={stopTyping}
+                  placeholder={editingMessageId ? 'Edit your message...' : 'Type a message...'}
                 />
-              </label>
-
-              <div className="emoji-wrap">
-                <button type="button" className="emoji-btn" onClick={() => setShowEmoji((v) => !v)} aria-label="Emoji">
-                  🙂
-                </button>
-                {showEmoji && (
-                  <div className="emoji-popover">
-                    <EmojiPicker onEmojiClick={onEmojiClick} height={360} width={300} />
-                  </div>
-                )}
               </div>
-
-              <input
-                type="text"
-                className="input message-input"
-                value={messageInput}
-                onChange={(e) => handleMessageInputChange(e.target.value)}
-                onBlur={stopTyping}
-                placeholder={editingMessageId ? 'Edit your message...' : 'Type a message...'}
-              />
               <button type="submit" className="btn btn-primary send-btn">
                 {editingMessageId ? 'Save' : 'Send'}
               </button>
@@ -839,12 +859,17 @@ export default function Dashboard() {
           </>
         ) : (
           <div className="no-chat-selected">
+            <button type="button" className="mobile-sidebar-toggle mobile-sidebar-toggle-empty" onClick={() => setShowSidebarMobile(true)}>
+              Browse conversations
+            </button>
             <div className="no-chat-illustration">C</div>
             <h3>Select a conversation</h3>
             <p>Choose a chat from the sidebar, start a DM, or create a fresh group space.</p>
           </div>
         )}
       </main>
+
+      {showSidebarMobile && <button type="button" className="sidebar-backdrop" onClick={() => setShowSidebarMobile(false)} aria-label="Close conversation list" />}
 
       {showCreateModal && (
         <div className="modal-overlay" onClick={() => setShowCreateModal(false)}>
