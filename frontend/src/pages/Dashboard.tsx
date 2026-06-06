@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Client } from '@stomp/stompjs';
 import SockJS from 'sockjs-client';
 import EmojiPicker, { EmojiClickData } from 'emoji-picker-react';
-import { chatApi, presenceApi, resolveMediaUrl, userApi, WS_ENDPOINT } from '../services/api';
+import { chatApi, presenceApi, resolveMediaUrl, userApi, WS_ENDPOINT, API_ORIGIN } from '../services/api';
 import { useAuthStore, useChatStore } from '../stores';
 import type { ChatRoom, Message, TypingIndicator, UploadResult, User } from '../types';
 import NewChatModal from '../components/NewChatModal';
@@ -413,6 +413,13 @@ export default function Dashboard() {
   useEffect(() => {
     directPeerRef.current = directPeer;
   }, [directPeer]);
+
+  useEffect(() => {
+    const id = setInterval(() => {
+      fetch(API_ORIGIN, { method: 'HEAD', mode: 'no-cors' }).catch(() => {});
+    }, 600000);
+    return () => clearInterval(id);
+  }, []);
 
   useEffect(() => {
     if (!currentRoom) return;
