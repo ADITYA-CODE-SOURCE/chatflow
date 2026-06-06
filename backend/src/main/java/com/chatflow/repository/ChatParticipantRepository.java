@@ -18,7 +18,9 @@ public interface ChatParticipantRepository extends JpaRepository<ChatParticipant
     
     List<ChatParticipant> findByUser(User user);
     
-    Optional<ChatParticipant> findByChatRoomAndUser(ChatRoom chatRoom, User user);
+    Optional<ChatParticipant> findFirstByChatRoomAndUserOrderByJoinedAtAsc(ChatRoom chatRoom, User user);
+
+    List<ChatParticipant> findAllByChatRoomAndUserOrderByJoinedAtAsc(ChatRoom chatRoom, User user);
     
     boolean existsByChatRoomAndUser(ChatRoom chatRoom, User user);
 
@@ -30,6 +32,15 @@ public interface ChatParticipantRepository extends JpaRepository<ChatParticipant
     
     @Query("SELECT cp.user FROM ChatParticipant cp WHERE cp.chatRoom.id = :roomId")
     List<User> findUsersByChatRoomId(@Param("roomId") UUID roomId);
+
+    @Query("""
+            SELECT cp.user
+            FROM ChatParticipant cp
+            WHERE cp.chatRoom.id = :roomId
+              AND LOWER(cp.user.displayName) LIKE LOWER(CONCAT('%', :query, '%'))
+            ORDER BY cp.user.displayName ASC
+            """)
+    List<User> searchUsersByChatRoomId(@Param("roomId") UUID roomId, @Param("query") String query);
 
     long countByChatRoom(ChatRoom chatRoom);
 }

@@ -6,7 +6,10 @@ import java.time.Instant;
 import java.util.UUID;
 
 @Entity
-@Table(name = "chat_participants")
+@Table(
+        name = "chat_participants",
+        uniqueConstraints = @UniqueConstraint(columnNames = {"chat_room_id", "user_id"})
+)
 @Getter
 @Setter
 @NoArgsConstructor

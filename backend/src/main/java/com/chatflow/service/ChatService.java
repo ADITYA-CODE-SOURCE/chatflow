@@ -4,6 +4,7 @@ import com.chatflow.dto.*;
 import com.chatflow.entity.ChatParticipant;
 import com.chatflow.entity.ChatRoom;
 import com.chatflow.entity.Message;
+import com.chatflow.entity.MessageReaction;
 import com.chatflow.entity.User;
 import com.chatflow.entity.UserPresence;
 import com.chatflow.repository.*;
@@ -27,6 +28,7 @@ public class ChatService {
     private final MessageRepository messageRepository;
     private final UserRepository userRepository;
     private final UserPresenceRepository userPresenceRepository;
+    private final MessageReactionRepository messageReactionRepository;
     private final SimpMessagingTemplate messagingTemplate;
 
     public ChatService(
@@ -35,12 +37,14 @@ public class ChatService {
             MessageRepository messageRepository,
             UserRepository userRepository,
             UserPresenceRepository userPresenceRepository,
+            MessageReactionRepository messageReactionRepository,
             SimpMessagingTemplate messagingTemplate) {
         this.chatRoomRepository = chatRoomRepository;
         this.chatParticipantRepository = chatParticipantRepository;
         this.messageRepository = messageRepository;
         this.userRepository = userRepository;
         this.userPresenceRepository = userPresenceRepository;
+        this.messageReactionRepository = messageReactionRepository;
         this.messagingTemplate = messagingTemplate;
     }
 
@@ -53,8 +57,17 @@ public class ChatService {
     }
 
     private ChatParticipant requireParticipant(ChatRoom room, User user) {
-        return chatParticipantRepository.findByChatRoomAndUser(room, user)
-                .orElseThrow(() -> new RuntimeException("Not a participant of this chat room"));
+        List<ChatParticipant> participants = chatParticipantRepository.findAllByChatRoomAndUserOrderByJoinedAtAsc(room, user);
+        if (participants.isEmpty()) {
+            throw new RuntimeException("Not a participant of this chat room");
+        }
+
+        if (participants.size() > 1) {
+            List<ChatParticipant> duplicates = participants.subList(1, participants.size());
+            chatParticipantRepository.deleteAll(duplicates);
+        }
+
+        return participants.get(0);
     }
 
     private ChatParticipant requireAdmin(ChatRoom room, User user) {
@@ -167,6 +180,10 @@ public class ChatService {
 
     @Transactional
     public ChatRoomDto createDirectChat(User user1, User user2) {
+        if (user1.getId().equals(user2.getId())) {
+            throw new RuntimeException("You cannot start a direct chat with yourself");
+        }
+
         List<ChatRoom> existingDirectRooms = chatRoomRepository.findDirectRooms(user1, user2);
         if (!existingDirectRooms.isEmpty()) {
             return mapToDto(existingDirectRooms.get(0), user1, user2);
@@ -389,9 +406,18 @@ public class ChatService {
 
     @Transactional
     public void deleteGroup(UUID roomId, User actor) {
+        deleteRoom(roomId, actor);
+    }
+
+    @Transactional
+    public void deleteRoom(UUID roomId, User actor) {
         ChatRoom room = requireRoom(roomId);
-        requireGroup(room);
-        requireOwnerParticipant(room, actor);
+
+        if (room.getRoomType() == ChatRoom.RoomType.GROUP) {
+            requireAdmin(room, actor);
+        } else {
+            requireParticipant(room, actor);
+        }
 
         messageRepository.deleteByChatRoomId(roomId);
         chatParticipantRepository.deleteByChatRoomId(roomId);
@@ -441,8 +467,9 @@ public class ChatService {
         if (finalType == Message.MessageType.TEXT && normalizedContent.isBlank()) {
             throw new RuntimeException("Message content is required");
         }
-        if (finalType == Message.MessageType.IMAGE && (attachmentUrl == null || attachmentUrl.isBlank())) {
-            throw new RuntimeException("Image URL is required");
+        if ((finalType == Message.MessageType.IMAGE || finalType == Message.MessageType.FILE)
+                && (attachmentUrl == null || attachmentUrl.isBlank())) {
+            throw new RuntimeException(finalType == Message.MessageType.IMAGE ? "Image URL is required" : "File URL is required");
         }
 
         Message replyToMessage = null;
@@ -524,6 +551,34 @@ public class ChatService {
         return dto;
     }
 
+    @Transactional
+    public MessageDto toggleReaction(UUID roomId, UUID messageId, String emoji, User actor) {
+        String normalizedEmoji = emoji == null ? "" : emoji.trim();
+        if (normalizedEmoji.isEmpty() || normalizedEmoji.length() > 16) {
+            throw new RuntimeException("Please choose a valid emoji reaction");
+        }
+
+        ChatRoom room = requireRoom(roomId);
+        requireParticipant(room, actor);
+        Message message = messageRepository.findByIdAndChatRoomId(messageId, roomId)
+                .orElseThrow(() -> new RuntimeException("Message not found"));
+
+        messageReactionRepository.findByMessageIdAndUserIdAndEmoji(messageId, actor.getId(), normalizedEmoji)
+                .ifPresentOrElse(
+                        messageReactionRepository::delete,
+                        () -> messageReactionRepository.save(MessageReaction.builder()
+                                .message(message)
+                                .user(actor)
+                                .emoji(normalizedEmoji)
+                                .build())
+                );
+
+        List<ChatParticipant> participants = chatParticipantRepository.findByChatRoom(room);
+        MessageDto dto = mapMessageToDto(message, participants, actor);
+        messagingTemplate.convertAndSend("/topic/chat/" + roomId + "/message-updated", dto);
+        return dto;
+    }
+
     @Transactional(readOnly = true)
     public void sendTypingIndicator(UUID roomId, User user, boolean typing) {
         ChatRoom room = requireRoom(roomId);
@@ -585,6 +640,27 @@ public class ChatService {
                 .collect(Collectors.toList());
     }
 
+    @Transactional(readOnly = true)
+    public List<UserDto> searchRoomMembers(UUID roomId, String query, User user) {
+        ChatRoom room = requireRoom(roomId);
+        requireParticipant(room, user);
+
+        String normalizedQuery = query == null ? "" : query.trim();
+        if (normalizedQuery.isBlank()) {
+            return chatParticipantRepository.findByChatRoom(room).stream()
+                    .map(ChatParticipant::getUser)
+                    .sorted(Comparator.comparing(User::getDisplayName, String.CASE_INSENSITIVE_ORDER))
+                    .limit(10)
+                    .map(this::mapUserToDto)
+                    .collect(Collectors.toList());
+        }
+
+        return chatParticipantRepository.searchUsersByChatRoomId(roomId, normalizedQuery).stream()
+                .limit(10)
+                .map(this::mapUserToDto)
+                .collect(Collectors.toList());
+    }
+
     @Transactional
     public ChatRoomDto setMuted(UUID roomId, User user, boolean muted) {
         ChatRoom room = requireRoom(roomId);
@@ -626,7 +702,7 @@ public class ChatService {
                 .map(message -> mapMessageToDto(message, chatParticipantRepository.findByChatRoom(room), currentUser))
                 .orElse(null);
 
-        ChatParticipant currentParticipant = chatParticipantRepository.findByChatRoomAndUser(room, currentUser).orElse(null);
+        ChatParticipant currentParticipant = chatParticipantRepository.findFirstByChatRoomAndUserOrderByJoinedAtAsc(room, currentUser).orElse(null);
         MessageDto pinnedMessage = null;
         if (room.getPinnedMessageId() != null) {
             pinnedMessage = messageRepository.findByIdAndChatRoomId(room.getPinnedMessageId(), room.getId())
@@ -661,7 +737,7 @@ public class ChatService {
     }
 
     private long getUnreadCount(ChatRoom room, User currentUser) {
-        return chatParticipantRepository.findByChatRoomAndUser(room, currentUser)
+        return chatParticipantRepository.findFirstByChatRoomAndUserOrderByJoinedAtAsc(room, currentUser)
                 .map(participant -> {
                     if (participant.getLastReadMessageId() == null) {
                         return messageRepository.countByChatRoomIdAndSenderIdNot(room.getId(), currentUser.getId());
@@ -679,7 +755,7 @@ public class ChatService {
     }
 
     private void markRoomAsRead(ChatRoom room, User user) {
-        chatParticipantRepository.findByChatRoomAndUser(room, user)
+        chatParticipantRepository.findFirstByChatRoomAndUserOrderByJoinedAtAsc(room, user)
                 .ifPresent(participant -> {
                     UUID latestMessageId = messageRepository.findTopByChatRoomIdOrderByCreatedAtDesc(room.getId())
                             .map(Message::getId)
@@ -695,7 +771,7 @@ public class ChatService {
     }
 
     private void updateLastReadForSender(ChatRoom room, User sender, UUID messageId) {
-        chatParticipantRepository.findByChatRoomAndUser(room, sender)
+        chatParticipantRepository.findFirstByChatRoomAndUserOrderByJoinedAtAsc(room, sender)
                 .ifPresent(participant -> {
                     participant.setLastReadMessageId(messageId);
                     chatParticipantRepository.save(participant);
@@ -750,7 +826,27 @@ public class ChatService {
                 .deleted(message.getDeletedAt() != null)
                 .readByCount(seenByNames.size())
                 .seenByNames(seenByNames)
+                .reactions(mapReactions(message.getId(), currentUser))
                 .build();
+    }
+
+    private List<ReactionDto> mapReactions(UUID messageId, User currentUser) {
+        Map<String, List<MessageReaction>> grouped = messageReactionRepository.findByMessageIdOrderByEmojiAscCreatedAtAsc(messageId)
+                .stream()
+                .collect(Collectors.groupingBy(MessageReaction::getEmoji, LinkedHashMap::new, Collectors.toList()));
+
+        return grouped.entrySet().stream()
+                .map(entry -> ReactionDto.builder()
+                        .emoji(entry.getKey())
+                        .count(entry.getValue().size())
+                        .reactedByCurrentUser(currentUser != null && entry.getValue().stream()
+                                .anyMatch(reaction -> reaction.getUser().getId().equals(currentUser.getId())))
+                        .userNames(entry.getValue().stream()
+                                .map(reaction -> reaction.getUser().getDisplayName())
+                                .distinct()
+                                .collect(Collectors.toList()))
+                        .build())
+                .collect(Collectors.toList());
     }
 
     private UserDto mapUserToDto(User user) {

@@ -1,8 +1,10 @@
 package com.chatflow.controller;
 
 import com.chatflow.dto.UserDto;
+import com.chatflow.dto.UserUpdateDto;
 import com.chatflow.security.UserPrincipal;
 import com.chatflow.service.UserService;
+import jakarta.validation.Valid;
 import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -31,5 +33,13 @@ public class UserController {
             @AuthenticationPrincipal UserPrincipal principal
     ) {
         return ResponseEntity.ok(userService.searchUsers(query, page, size, principal.getUser()));
+    }
+
+    @PutMapping("/me")
+    public ResponseEntity<UserDto> updateMe(
+            @Valid @RequestBody UserUpdateDto request,
+            @AuthenticationPrincipal UserPrincipal principal
+    ) {
+        return ResponseEntity.ok(userService.updateProfile(principal.getUser(), request));
     }
 }

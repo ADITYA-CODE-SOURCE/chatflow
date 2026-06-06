@@ -1,6 +1,7 @@
 package com.chatflow.service;
 
 import com.chatflow.dto.UserDto;
+import com.chatflow.dto.UserUpdateDto;
 import com.chatflow.entity.User;
 import com.chatflow.entity.UserPresence;
 import com.chatflow.repository.UserPresenceRepository;
@@ -45,5 +46,16 @@ public class UserService {
 
         // Keep it simple for now: return full page and filter out current user on the client.
         return result.map(this::toDto);
+    }
+
+    public UserDto updateProfile(User currentUser, UserUpdateDto request) {
+        User user = userRepository.findById(currentUser.getId())
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        user.setDisplayName(request.getDisplayName().trim());
+        user.setBio(request.getBio() == null || request.getBio().trim().isEmpty() ? null : request.getBio().trim());
+        user.setAvatarUrl(request.getAvatarUrl() == null || request.getAvatarUrl().trim().isEmpty() ? null : request.getAvatarUrl().trim());
+
+        return toDto(userRepository.save(user));
     }
 }

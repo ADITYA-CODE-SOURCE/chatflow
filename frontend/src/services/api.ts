@@ -1,5 +1,5 @@
 import axios from 'axios';
-import type { AuthResponse, User, ChatRoom, Message, GroupInvite } from '../types';
+import type { AuthResponse, User, ChatRoom, Message, GroupInvite, UploadResult } from '../types';
 
 function trimTrailingSlash(value: string) {
   return value.endsWith('/') ? value.slice(0, -1) : value;
@@ -152,6 +152,15 @@ export const chatApi = {
     return res.data.url;
   },
 
+  uploadFile: async (file: File) => {
+    const form = new FormData();
+    form.append('file', file);
+    const res = await api.post<UploadResult>('/uploads/file', form, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return res.data;
+  },
+
   sendTyping: (roomId: string, typing: boolean) =>
     api.post(`/chat-rooms/${roomId}/typing`, { typing }),
 
@@ -160,6 +169,9 @@ export const chatApi = {
   
   getParticipants: (roomId: string) =>
     api.get<User[]>(`/chat-rooms/${roomId}/participants`),
+
+  searchRoomMembers: (roomId: string, q: string) =>
+    api.get<User[]>(`/chat-rooms/${roomId}/members/search`, { params: { q } }),
 
   getGroupMembers: (roomId: string) =>
     api.get<any[]>(`/chat-rooms/${roomId}/members`),
@@ -179,6 +191,8 @@ export const chatApi = {
 
   deleteGroup: (roomId: string) => api.delete(`/chat-rooms/${roomId}`),
 
+  deleteChat: (roomId: string) => api.delete(`/chat-rooms/${roomId}`),
+
   getGroupInvite: (roomId: string) => api.get<GroupInvite>(`/groups/${roomId}/invite`),
 
   regenerateInvite: (roomId: string) => api.post<GroupInvite>(`/groups/${roomId}/regenerate-invite`),
@@ -186,10 +200,15 @@ export const chatApi = {
   setMuted: (roomId: string, muted: boolean) => api.put<ChatRoom>(`/chat-rooms/${roomId}/mute`, { muted }),
 
   pinMessage: (roomId: string, messageId?: string) => api.put<ChatRoom>(`/chat-rooms/${roomId}/pin`, { messageId }),
+
+  toggleReaction: (roomId: string, messageId: string, emoji: string) =>
+    api.post<Message>(`/chat-rooms/${roomId}/messages/${messageId}/reactions`, { emoji }),
 };
 
 export const userApi = {
   me: () => api.get<User>('/users/me'),
+  updateMe: (data: { displayName: string; bio?: string; avatarUrl?: string }) =>
+    api.put<User>('/users/me', data),
   search: (q: string, page = 0, size = 20) =>
     api.get<{ content: User[] }>('/users/search', { params: { q, page, size } }),
 };

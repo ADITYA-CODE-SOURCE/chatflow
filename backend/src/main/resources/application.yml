@@ -23,14 +23,15 @@ spring:
 
   servlet:
     multipart:
-      max-file-size: 5MB
-      max-request-size: 5MB
+      max-file-size: 15MB
+      max-request-size: 15MB
 
 server:
-  port: 8080
+  port: ${PORT:8080}
 
 app:
-  frontend-url: http://localhost:5173
+  frontend-url: ${FRONTEND_URL:http://localhost:5173}
+  allowed-origins: ${ALLOWED_ORIGINS:http://localhost:5173,http://localhost:3000}
   jwt:
     secret: chatflow-secret-key-for-jwt-token-generation-must-be-at-least-256-bits-long
     access-token-expiration: 3600000

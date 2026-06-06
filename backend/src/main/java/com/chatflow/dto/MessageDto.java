@@ -6,6 +6,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import java.time.Instant;
+import java.util.List;
 import java.util.UUID;
 
 @Data
@@ -30,4 +31,5 @@ public class MessageDto {
     private boolean deleted;
     private int readByCount;
     private java.util.List<String> seenByNames;
+    private List<ReactionDto> reactions;
 }

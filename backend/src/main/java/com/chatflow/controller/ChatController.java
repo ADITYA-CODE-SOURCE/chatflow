@@ -9,6 +9,7 @@ import com.chatflow.dto.MessageRequestDto;
 import com.chatflow.dto.MessageUpdateDto;
 import com.chatflow.dto.MuteRequestDto;
 import com.chatflow.dto.PinMessageRequestDto;
+import com.chatflow.dto.ReactionRequestDto;
 import com.chatflow.dto.UserDto;
 import com.chatflow.entity.Message;
 import com.chatflow.entity.User;
@@ -127,6 +128,16 @@ public class ChatController {
         return ResponseEntity.ok(chatService.deleteMessage(roomId, messageId, principal.getUser()));
     }
 
+    @PostMapping("/{roomId}/messages/{messageId}/reactions")
+    public ResponseEntity<MessageDto> toggleReaction(
+            @PathVariable UUID roomId,
+            @PathVariable UUID messageId,
+            @Valid @RequestBody ReactionRequestDto request,
+            @AuthenticationPrincipal UserPrincipal principal
+    ) {
+        return ResponseEntity.ok(chatService.toggleReaction(roomId, messageId, request.getEmoji(), principal.getUser()));
+    }
+
     @PostMapping("/{roomId}/typing")
     public ResponseEntity<Void> sendTypingIndicator(
             @PathVariable UUID roomId,
@@ -152,6 +163,15 @@ public class ChatController {
             @AuthenticationPrincipal UserPrincipal principal
     ) {
         return ResponseEntity.ok(chatService.getParticipants(roomId, principal.getUser()));
+    }
+
+    @GetMapping("/{roomId}/members/search")
+    public ResponseEntity<List<UserDto>> searchRoomMembers(
+            @PathVariable UUID roomId,
+            @RequestParam(name = "q", defaultValue = "") String query,
+            @AuthenticationPrincipal UserPrincipal principal
+    ) {
+        return ResponseEntity.ok(chatService.searchRoomMembers(roomId, query, principal.getUser()));
     }
 
     @GetMapping("/{roomId}/members")
@@ -225,7 +245,7 @@ public class ChatController {
             @PathVariable UUID roomId,
             @AuthenticationPrincipal UserPrincipal principal
     ) {
-        chatService.deleteGroup(roomId, principal.getUser());
+        chatService.deleteRoom(roomId, principal.getUser());
         return ResponseEntity.ok().build();
     }
 

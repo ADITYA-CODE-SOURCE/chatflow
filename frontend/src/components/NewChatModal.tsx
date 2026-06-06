@@ -7,9 +7,10 @@ type Props = {
   open: boolean;
   onClose: () => void;
   onRoomCreatedOrJoined: (room?: ChatRoom) => void;
+  currentUserId?: string;
 };
 
-export default function NewChatModal({ open, onClose, onRoomCreatedOrJoined }: Props) {
+export default function NewChatModal({ open, onClose, onRoomCreatedOrJoined, currentUserId }: Props) {
   const [tab, setTab] = useState<'dm' | 'join'>('dm');
   const [query, setQuery] = useState('');
   const [inviteCode, setInviteCode] = useState('');
@@ -35,7 +36,9 @@ export default function NewChatModal({ open, onClose, onRoomCreatedOrJoined }: P
       setError('');
       try {
         const res = await userApi.search(query.trim(), 0, 10);
-        if (!cancelled) setResults(res.data.content || []);
+        if (!cancelled) {
+          setResults((res.data.content || []).filter((user) => user.id !== currentUserId));
+        }
       } catch (e: any) {
         if (!cancelled) setError(e?.response?.data?.message || 'Search failed');
       } finally {
@@ -51,6 +54,10 @@ export default function NewChatModal({ open, onClose, onRoomCreatedOrJoined }: P
   if (!open) return null;
 
   const startDm = async (userId: string) => {
+    if (userId === currentUserId) {
+      setError('You cannot start a direct chat with yourself');
+      return;
+    }
     setLoading(true);
     setError('');
     try {

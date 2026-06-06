@@ -9,6 +9,13 @@ export interface User {
   lastSeen?: string;
 }
 
+export interface ReactionSummary {
+  emoji: string;
+  count: number;
+  reactedByCurrentUser: boolean;
+  userNames: string[];
+}
+
 export interface ChatRoom {
   id: string;
   name?: string;
@@ -45,6 +52,7 @@ export interface Message {
   deleted: boolean;
   readByCount: number;
   seenByNames: string[];
+  reactions: ReactionSummary[];
 }
 
 export interface TypingIndicator {
@@ -65,4 +73,11 @@ export interface GroupInvite {
   inviteCode: string;
   inviteLink: string;
   expiresAt?: string;
+}
+
+export interface UploadResult {
+  url: string;
+  fileName: string;
+  contentType?: string;
+  size: number;
 }

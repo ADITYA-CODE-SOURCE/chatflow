@@ -1,5 +1,6 @@
 package com.chatflow.controller;
 
+import com.chatflow.dto.UploadResponseDto;
 import com.chatflow.security.UserPrincipal;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
@@ -25,6 +26,7 @@ import java.util.UUID;
 public class UploadController {
 
     private static final long MAX_IMAGE_BYTES = 5L * 1024 * 1024;
+    private static final long MAX_FILE_BYTES = 15L * 1024 * 1024;
     private static final Set<String> ALLOWED_TYPES = Set.of(
             "image/jpeg",
             "image/png",
@@ -73,13 +75,51 @@ public class UploadController {
         Path target = uploadDir.resolve(fileName);
         Files.copy(file.getInputStream(), target, StandardCopyOption.REPLACE_EXISTING);
 
-        String absoluteUrl = ServletUriComponentsBuilder.fromCurrentContextPath()
+        return ResponseEntity.ok(Map.of("url", buildAbsoluteUrl(fileName)));
+    }
+
+    @PostMapping(value = "/file", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<UploadResponseDto> uploadFile(
+            @RequestPart("file") MultipartFile file,
+            @AuthenticationPrincipal UserPrincipal principal
+    ) throws IOException {
+        if (principal == null) {
+            return ResponseEntity.status(401).build();
+        }
+
+        if (file == null || file.isEmpty()) {
+            return ResponseEntity.badRequest().build();
+        }
+
+        if (file.getSize() > MAX_FILE_BYTES) {
+            return ResponseEntity.badRequest().build();
+        }
+
+        Files.createDirectories(uploadDir);
+
+        String original = StringUtils.cleanPath(file.getOriginalFilename() == null ? "file" : file.getOriginalFilename());
+        String ext = "";
+        int dot = original.lastIndexOf('.');
+        if (dot >= 0 && dot < original.length() - 1) {
+            ext = original.substring(dot).toLowerCase(Locale.ROOT);
+        }
+
+        String fileName = UUID.randomUUID() + ext;
+        Path target = uploadDir.resolve(fileName);
+        Files.copy(file.getInputStream(), target, StandardCopyOption.REPLACE_EXISTING);
+
+        return ResponseEntity.ok(UploadResponseDto.builder()
+                .url(buildAbsoluteUrl(fileName))
+                .fileName(original)
+                .contentType(file.getContentType())
+                .size(file.getSize())
+                .build());
+    }
+
+    private String buildAbsoluteUrl(String fileName) {
+        return ServletUriComponentsBuilder.fromCurrentContextPath()
                 .path("/uploads/")
                 .path(fileName)
                 .toUriString();
-
-        return ResponseEntity.ok(Map.of(
-                "url", absoluteUrl
-        ));
     }
 }

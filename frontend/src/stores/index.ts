@@ -7,6 +7,7 @@ interface AuthState {
   accessToken: string | null;
   refreshToken: string | null;
   setAuth: (user: User, accessToken: string, refreshToken: string) => void;
+  updateUser: (user: User) => void;
   logout: () => void;
 }
 
@@ -18,6 +19,9 @@ export const useAuthStore = create<AuthState>()(
       refreshToken: null,
       setAuth: (user, accessToken, refreshToken) => {
         set({ user, accessToken, refreshToken });
+      },
+      updateUser: (user) => {
+        set((state) => ({ ...state, user }));
       },
       logout: () => {
         set({ user: null, accessToken: null, refreshToken: null });
@@ -51,7 +55,15 @@ export const useChatStore = create<ChatState>()((set) => ({
   setChatRooms: (chatRooms) => set({ chatRooms }),
   setCurrentRoom: (currentRoom) => set({ currentRoom }),
   addMessage: (message) =>
-    set((state) => ({ messages: [...state.messages, message] })),
+    set((state) => {
+      const existingIndex = state.messages.findIndex((item) => item.id === message.id);
+      if (existingIndex >= 0) {
+        const messages = [...state.messages];
+        messages[existingIndex] = message;
+        return { messages };
+      }
+      return { messages: [...state.messages, message] };
+    }),
   setMessages: (messages) => set({ messages }),
   updateChatRoom: (roomId, updater) =>
     set((state) => {
