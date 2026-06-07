@@ -5,10 +5,55 @@ function trimTrailingSlash(value: string) {
   return value.endsWith('/') ? value.slice(0, -1) : value;
 }
 
+function sleep(ms: number) {
+  return new Promise((resolve) => window.setTimeout(resolve, ms));
+}
+
 const configuredApiBaseUrl = (import.meta.env.VITE_API_BASE_URL || '').trim();
 export const API_ORIGIN = trimTrailingSlash(configuredApiBaseUrl);
 export const API_BASE_URL = API_ORIGIN ? `${API_ORIGIN}/api` : '/api';
 export const WS_ENDPOINT = API_ORIGIN ? `${API_ORIGIN}/ws` : '/ws';
+
+let backendReadyAt = 0;
+let backendWakePromise: Promise<void> | null = null;
+
+export async function ensureBackendReady(force = false) {
+  if (!API_ORIGIN) return;
+
+  const now = Date.now();
+  if (!force && now - backendReadyAt < 120000) return;
+  if (backendWakePromise) return backendWakePromise;
+
+  backendWakePromise = (async () => {
+    const deadline = Date.now() + 90000;
+
+    while (Date.now() < deadline) {
+      const controller = new AbortController();
+      const timer = window.setTimeout(() => controller.abort(), 12000);
+
+      try {
+        await fetch(API_ORIGIN, {
+          method: 'HEAD',
+          mode: 'no-cors',
+          cache: 'no-store',
+          signal: controller.signal,
+        });
+        backendReadyAt = Date.now();
+        return;
+      } catch {
+        await sleep(3000);
+      } finally {
+        window.clearTimeout(timer);
+      }
+    }
+
+    throw new Error('Server is waking up. Please try again in a moment.');
+  })().finally(() => {
+    backendWakePromise = null;
+  });
+
+  return backendWakePromise;
+}
 
 export function resolveMediaUrl(url?: string | null) {
   if (!url) return '';
@@ -110,25 +155,37 @@ api.interceptors.response.use(
 );
 
 export const authApi = {
-  register: (data: { email: string; password: string; displayName: string }) =>
-    api.post<AuthResponse>('/auth/register', data),
+  register: async (data: { email: string; password: string; displayName: string }) => {
+    await ensureBackendReady();
+    return api.post<AuthResponse>('/auth/register', data);
+  },
   
-  login: (data: { email: string; password: string }) =>
-    api.post<AuthResponse>('/auth/login', data),
+  login: async (data: { email: string; password: string }) => {
+    await ensureBackendReady();
+    return api.post<AuthResponse>('/auth/login', data);
+  },
   
   refresh: (refreshToken: string) =>
     api.post<AuthResponse>('/auth/refresh', { refreshToken }),
 };
 
 export const chatApi = {
-  getChatRooms: () => api.get<ChatRoom[]>('/chat-rooms'),
+  getChatRooms: async () => {
+    await ensureBackendReady();
+    return api.get<ChatRoom[]>('/chat-rooms');
+  },
 
-  createDirectChat: (userId: string) => api.post<ChatRoom>('/chat-rooms/direct', { userId }),
+  createDirectChat: async (userId: string) => {
+    await ensureBackendReady();
+    return api.post<ChatRoom>('/chat-rooms/direct', { userId });
+  },
 
   joinGroupByInvite: (inviteCode: string) => api.post<ChatRoom>(`/groups/join/${encodeURIComponent(inviteCode)}`),
   
-  createGroupChat: (data: { name: string; description?: string }) =>
-    api.post<ChatRoom>('/chat-rooms', data),
+  createGroupChat: async (data: { name: string; description?: string }) => {
+    await ensureBackendReady();
+    return api.post<ChatRoom>('/chat-rooms', data);
+  },
   
   getChatRoom: (roomId: string) => api.get<ChatRoom>(`/chat-rooms/${roomId}`),
   
@@ -139,8 +196,10 @@ export const chatApi = {
 
   markRoomAsRead: (roomId: string) => api.post(`/chat-rooms/${roomId}/read`),
 
-  sendMessage: (roomId: string, data: { content: string; messageType?: 'TEXT' | 'IMAGE' | 'FILE'; attachmentUrl?: string; replyToMessageId?: string }) =>
-    api.post<Message>(`/chat-rooms/${roomId}/messages`, data),
+  sendMessage: async (roomId: string, data: { content: string; messageType?: 'TEXT' | 'IMAGE' | 'FILE'; attachmentUrl?: string; replyToMessageId?: string }) => {
+    await ensureBackendReady();
+    return api.post<Message>(`/chat-rooms/${roomId}/messages`, data);
+  },
 
   updateMessage: (roomId: string, messageId: string, content: string) =>
     api.put<Message>(`/chat-rooms/${roomId}/messages/${messageId}`, { content }),
@@ -149,6 +208,7 @@ export const chatApi = {
     api.delete<Message>(`/chat-rooms/${roomId}/messages/${messageId}`),
 
   uploadImage: async (file: File) => {
+    await ensureBackendReady();
     const form = new FormData();
     form.append('file', file);
     const res = await api.post<{ url: string }>('/uploads/image', form);
@@ -156,6 +216,7 @@ export const chatApi = {
   },
 
   uploadFile: async (file: File) => {
+    await ensureBackendReady();
     const form = new FormData();
     form.append('file', file);
     const res = await api.post<UploadResult>('/uploads/file', form);
@@ -165,14 +226,18 @@ export const chatApi = {
   sendTyping: (roomId: string, typing: boolean) =>
     api.post(`/chat-rooms/${roomId}/typing`, { typing }),
 
-  searchMessages: (roomId: string, q: string) =>
-    api.get<Message[]>(`/chat-rooms/${roomId}/messages/search`, { params: { q } }),
+  searchMessages: async (roomId: string, q: string) => {
+    await ensureBackendReady();
+    return api.get<Message[]>(`/chat-rooms/${roomId}/messages/search`, { params: { q } });
+  },
   
   getParticipants: (roomId: string) =>
     api.get<User[]>(`/chat-rooms/${roomId}/participants`),
 
-  searchRoomMembers: (roomId: string, q: string) =>
-    api.get<User[]>(`/chat-rooms/${roomId}/members/search`, { params: { q } }),
+  searchRoomMembers: async (roomId: string, q: string) => {
+    await ensureBackendReady();
+    return api.get<User[]>(`/chat-rooms/${roomId}/members/search`, { params: { q } });
+  },
 
   getGroupMembers: (roomId: string) =>
     api.get<any[]>(`/chat-rooms/${roomId}/members`),
@@ -210,8 +275,10 @@ export const userApi = {
   me: () => api.get<User>('/users/me'),
   updateMe: (data: { displayName: string; bio?: string; avatarUrl?: string }) =>
     api.put<User>('/users/me', data),
-  search: (q: string, page = 0, size = 20) =>
-    api.get<{ content: User[] }>('/users/search', { params: { q, page, size } }),
+  search: async (q: string, page = 0, size = 20) => {
+    await ensureBackendReady();
+    return api.get<{ content: User[] }>('/users/search', { params: { q, page, size } });
+  },
 };
 
 export const presenceApi = {

@@ -9,12 +9,15 @@ export default function Register() {
   const [password, setPassword] = useState('');
   const [displayName, setDisplayName] = useState('');
   const [error, setError] = useState('');
+  const [submitting, setSubmitting] = useState(false);
   const navigate = useNavigate();
   const setAuth = useAuthStore((state) => state.setAuth);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (submitting) return;
     setError('');
+    setSubmitting(true);
     
     try {
       const response = await authApi.register({ email, password, displayName });
@@ -38,6 +41,8 @@ export default function Register() {
       }
 
       setError(err.response?.data?.message || err.message || 'Registration failed');
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -89,8 +94,8 @@ export default function Register() {
             />
           </div>
           
-          <button type="submit" className="btn btn-primary auth-btn">
-            Sign Up
+          <button type="submit" className="btn btn-primary auth-btn" disabled={submitting}>
+            {submitting ? 'Creating account...' : 'Sign Up'}
           </button>
         </form>
         

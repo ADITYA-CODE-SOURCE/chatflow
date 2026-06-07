@@ -8,12 +8,15 @@ export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [submitting, setSubmitting] = useState(false);
   const navigate = useNavigate();
   const setAuth = useAuthStore((state) => state.setAuth);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (submitting) return;
     setError('');
+    setSubmitting(true);
     
     try {
       const response = await authApi.login({ email, password });
@@ -33,6 +36,8 @@ export default function Login() {
       }
 
       setError(err.response?.data?.message || err.message || 'Login failed');
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -72,8 +77,8 @@ export default function Login() {
             />
           </div>
           
-          <button type="submit" className="btn btn-primary auth-btn">
-            Sign In
+          <button type="submit" className="btn btn-primary auth-btn" disabled={submitting}>
+            {submitting ? 'Signing in...' : 'Sign In'}
           </button>
         </form>
         
