@@ -155,6 +155,8 @@ export default function Dashboard() {
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messageInputRef = useRef<HTMLInputElement>(null);
+  const imageInputRef = useRef<HTMLInputElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const stompClientRef = useRef<Client | null>(null);
   const roomSubscriptionsRef = useRef<Array<{ unsubscribe: () => void }>>([]);
   const globalSubscriptionsRef = useRef<Array<{ unsubscribe: () => void }>>([]);
@@ -280,6 +282,17 @@ export default function Dashboard() {
     setMentionStartIndex(null);
     setActiveMentionIndex(0);
   }, []);
+
+  const clearAttachment = useCallback(() => {
+    if (imagePreview) {
+      URL.revokeObjectURL(imagePreview);
+    }
+    setSelectedImage(null);
+    setSelectedFile(null);
+    setImagePreview(null);
+    if (imageInputRef.current) imageInputRef.current.value = '';
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  }, [imagePreview]);
 
   const subscribeGlobal = useCallback(() => {
     const client = stompClientRef.current;
@@ -415,8 +428,13 @@ export default function Dashboard() {
   }, [directPeer]);
 
   useEffect(() => {
-    const id = setInterval(() => {
+    if (API_ORIGIN) {
       fetch(API_ORIGIN, { method: 'HEAD', mode: 'no-cors' }).catch(() => {});
+    }
+    const id = setInterval(() => {
+      if (API_ORIGIN) {
+        fetch(API_ORIGIN, { method: 'HEAD', mode: 'no-cors' }).catch(() => {});
+      }
     }, 600000);
     return () => clearInterval(id);
   }, []);
@@ -456,13 +474,8 @@ export default function Dashboard() {
   }
 
   const onPickImage = (file: File | null) => {
-    if (imagePreview) URL.revokeObjectURL(imagePreview);
     if (!file) {
-      setSelectedImage(null);
-      setImagePreview(null);
-      if (!selectedFile || ALLOWED_IMAGE_TYPES.includes(selectedFile.type)) {
-        setSelectedFile(null);
-      }
+      clearAttachment();
       return;
     }
     if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
@@ -473,14 +486,16 @@ export default function Dashboard() {
       showToast('Image must be 5 MB or smaller', 'error');
       return;
     }
+    if (imagePreview) URL.revokeObjectURL(imagePreview);
     setSelectedImage(file);
     setSelectedFile(file);
     setImagePreview(URL.createObjectURL(file));
+    if (imageInputRef.current) imageInputRef.current.value = '';
   };
 
   const onPickFile = (file: File | null) => {
     if (!file) {
-      setSelectedFile(null);
+      clearAttachment();
       return;
     }
 
@@ -494,13 +509,11 @@ export default function Dashboard() {
       return;
     }
 
-    if (imagePreview) {
-      URL.revokeObjectURL(imagePreview);
-      setImagePreview(null);
-    }
-
+    if (imagePreview) URL.revokeObjectURL(imagePreview);
+    setImagePreview(null);
     setSelectedImage(null);
     setSelectedFile(file);
+    if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
   const handleMessageInputChange = (value: string, caretPosition?: number | null) => {
@@ -621,14 +634,14 @@ export default function Dashboard() {
 
       setMessageInput('');
       setReplyTarget(null);
-      setSelectedImage(null);
-      setSelectedFile(null);
-      if (imagePreview) URL.revokeObjectURL(imagePreview);
-      setImagePreview(null);
+      clearAttachment();
       stopTyping();
     } catch (error: any) {
       console.error('Failed to send message:', error);
-      showToast(error?.response?.data?.message || 'Failed to send message', 'error');
+      const message = error?.code === 'ECONNABORTED'
+        ? 'The server is waking up. Please wait a moment and try again.'
+        : error?.response?.data?.message || 'Failed to send message';
+      showToast(message, 'error');
     } finally {
       setSendingMessage(false);
     }
@@ -1212,6 +1225,7 @@ export default function Dashboard() {
                 <label className="attach-btn" title="Attach image">
                   📷
                   <input
+                    ref={imageInputRef}
                     type="file"
                     accept="image/jpeg,image/png,image/gif,image/webp"
                     style={{ display: 'none' }}
@@ -1222,6 +1236,7 @@ export default function Dashboard() {
                 <label className="attach-btn" title="Attach file">
                   📎
                   <input
+                    ref={fileInputRef}
                     type="file"
                     style={{ display: 'none' }}
                     onChange={(e) => onPickFile(e.target.files?.[0] || null)}
@@ -1284,7 +1299,7 @@ export default function Dashboard() {
                   <strong>{selectedFile?.name || 'Attachment ready'}</strong>
                   <span>{imagePreview ? 'Image ready to send' : 'File ready to send'}</span>
                 </div>
-                <button type="button" onClick={() => onPickImage(null)}>Remove</button>
+                <button type="button" onClick={clearAttachment}>Remove</button>
               </div>
             )}
           </>

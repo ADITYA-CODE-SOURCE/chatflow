@@ -1,6 +1,7 @@
 .dashboard {
   display: flex;
-  height: 100vh;
+  height: 100dvh;
+  min-height: 100vh;
   padding: 10px;
   gap: 10px;
   position: relative;
@@ -1269,19 +1270,23 @@
 
 @media (max-width: 520px) {
   .dashboard {
-    padding: 10px;
+    height: 100dvh;
+    min-height: 100dvh;
+    padding: 0;
+    gap: 0;
   }
 
   .sidebar {
     position: fixed;
-    top: 10px;
-    left: 10px;
-    bottom: 10px;
-    width: min(88vw, 340px);
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: min(90vw, 360px);
     min-width: 0;
     transform: translateX(calc(-100% - 18px));
     transition: transform 0.24s ease;
     z-index: 6;
+    border-radius: 0 24px 24px 0;
   }
 
   .sidebar.sidebar-open {
@@ -1305,6 +1310,38 @@
 
   .mobile-sidebar-toggle-empty {
     margin-bottom: 20px;
+  }
+
+  .chat-main {
+    border-radius: 0;
+    min-height: 100dvh;
+    box-shadow: none;
+  }
+
+  .chat-header {
+    padding-top: calc(14px + env(safe-area-inset-top));
+    padding-bottom: 14px;
+    gap: 12px;
+  }
+
+  .chat-header-tools {
+    gap: 8px;
+    min-width: 0;
+  }
+
+  .chat-search {
+    flex-direction: column;
+    align-items: stretch;
+    flex-basis: 100%;
+  }
+
+  .chat-search .btn,
+  .chat-search .group-settings-btn {
+    width: 100%;
+  }
+
+  .messages-container {
+    padding: 16px 12px 24px;
   }
 
   .sidebar-actions {
@@ -1369,13 +1406,47 @@
     max-width: calc(100% - 40px);
   }
 
+  .message-text {
+    padding: 11px 12px;
+    border-radius: 16px;
+  }
+
+  .message-image {
+    width: min(100%, 260px);
+  }
+
   .message-avatar {
     width: 32px;
     height: 32px;
   }
 
+  .message-input-form {
+    padding: 12px 12px calc(12px + env(safe-area-inset-bottom));
+    gap: 10px;
+  }
+
   .composer-main {
     padding: 8px;
+    min-height: 0;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .message-input {
+    order: -1;
+    width: 100%;
+    min-height: 44px;
+    height: auto;
+    padding: 6px 2px;
+  }
+
+  .attach-btn,
+  .emoji-btn {
+    width: 44px;
+    height: 44px;
+    border-radius: 14px;
+    font-size: 18px;
   }
 
   .mention-option {
@@ -1384,7 +1455,37 @@
   }
 
   .send-btn {
-    min-height: 48px;
+    min-height: 50px;
+    border-radius: 16px;
+  }
+
+  .image-preview {
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 12px 12px calc(14px + env(safe-area-inset-bottom));
+  }
+
+  .image-preview img {
+    width: 56px;
+    height: 56px;
+  }
+
+  .image-preview button {
+    width: 100%;
+    min-height: 42px;
+  }
+
+  .modal-overlay {
+    align-items: flex-end;
+  }
+
+  .modal {
+    max-width: none;
+    width: 100%;
+    margin: 0;
+    border-radius: 24px 24px 0 0;
+    padding-bottom: calc(24px + env(safe-area-inset-bottom));
   }
 
   .sidebar-footer {

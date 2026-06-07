@@ -27,6 +27,10 @@ const api = axios.create({
 });
 
 api.interceptors.request.use((config) => {
+  if (typeof FormData !== 'undefined' && config.data instanceof FormData && config.headers) {
+    delete config.headers['Content-Type'];
+  }
+
   // Never attach Authorization to auth endpoints.
   const url = config.url || '';
   const isAuthEndpoint = url.startsWith('/auth/') || url.startsWith('/api/auth/');
