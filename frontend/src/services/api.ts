@@ -20,6 +20,7 @@ export function resolveMediaUrl(url?: string | null) {
 
 const api = axios.create({
   baseURL: API_BASE_URL,
+  timeout: 60000,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -146,18 +147,14 @@ export const chatApi = {
   uploadImage: async (file: File) => {
     const form = new FormData();
     form.append('file', file);
-    const res = await api.post<{ url: string }>('/uploads/image', form, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-    });
+    const res = await api.post<{ url: string }>('/uploads/image', form);
     return res.data.url;
   },
 
   uploadFile: async (file: File) => {
     const form = new FormData();
     form.append('file', file);
-    const res = await api.post<UploadResult>('/uploads/file', form, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-    });
+    const res = await api.post<UploadResult>('/uploads/file', form);
     return res.data;
   },
 
