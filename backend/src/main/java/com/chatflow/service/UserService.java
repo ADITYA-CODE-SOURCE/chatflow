@@ -10,8 +10,6 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 
-import java.util.UUID;
-
 @Service
 public class UserService {
 
@@ -39,12 +37,15 @@ public class UserService {
 
     public Page<UserDto> searchUsers(String query, int page, int size, User currentUser) {
         String q = query == null ? "" : query.trim();
-        UUID currentUserId = currentUser.getId();
-
         Page<User> result = userRepository
-                .findByEmailContainingIgnoreCaseOrDisplayNameContainingIgnoreCase(q, q, PageRequest.of(page, size));
+                .findByIdNotAndEmailContainingIgnoreCaseOrIdNotAndDisplayNameContainingIgnoreCase(
+                        currentUser.getId(),
+                        q,
+                        currentUser.getId(),
+                        q,
+                        PageRequest.of(page, size)
+                );
 
-        // Keep it simple for now: return full page and filter out current user on the client.
         return result.map(this::toDto);
     }
 
